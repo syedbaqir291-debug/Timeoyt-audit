@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time-Out Audit — Outside OR</title>
+<style>
+  :root{
+    --ink:#132A33;
+    --paper:#F4F6F5;
+    --card:#FFFFFF;
+    --line:#DDE3E1;
+    --accent:#0E6E62;
+    --accent-dark:#0A544B;
+    --met:#1E7A4C;
+    --met-bg:#E5F4EA;
+    --notmet:#B23A2E;
+    --notmet-bg:#FBE7E4;
+    --na:#5B6B72;
+    --na-bg:#EBEEEF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding-bottom:80px;
+  }
+  header{
+    background:var(--accent-dark);
+    color:#fff;
+    padding:18px 20px 16px;
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  header h1{
+    margin:0;
+    font-size:17px;
+    font-weight:650;
+    letter-spacing:0.2px;
+  }
+  header p{
+    margin:4px 0 0;
+    font-size:12.5px;
+    opacity:0.85;
+  }
+  .wrap{
+    max-width:640px;
+    margin:0 auto;
+    padding:16px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .card h2{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--accent-dark);
+    margin:0 0 12px;
+    font-weight:700;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    margin:10px 0 4px;
+    color:#3A4A50;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=number], input[type=date], select{
+    width:100%;
+    padding:10px 12px;
+    font-size:15px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:#fff;
+    color:var(--ink);
+    -webkit-appearance:none;
+  }
+  input:focus, select:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    border-color:var(--accent);
+  }
+  .qcard{
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--card);
+    padding:14px;
+    margin-bottom:10px;
+  }
+  .qnum{
+    display:inline-block;
+    background:var(--accent);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    width:20px;
+    height:20px;
+    line-height:20px;
+    text-align:center;
+    border-radius:5px;
+    margin-right:8px;
+  }
+  .qtext{
+    font-size:14px;
+    line-height:1.4;
+    display:block;
+    margin-bottom:10px;
+  }
+  .options{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+  }
+  .opt{
+    position:relative;
+  }
+  .opt input{
+    position:absolute;
+    opacity:0;
+    width:100%;
+    height:100%;
+    margin:0;
+    cursor:pointer;
+  }
+  .opt span{
+    display:block;
+    text-align:center;
+    padding:9px 4px;
+    border-radius:7px;
+    font-size:13px;
+    font-weight:650;
+    border:1.5px solid var(--line);
+    color:#5B6B72;
+    background:#fff;
+    transition:all .12s ease;
+  }
+  .opt input:checked + span.met{background:var(--met-bg);border-color:var(--met);color:var(--met);}
+  .opt input:checked + span.notmet{background:var(--notmet-bg);border-color:var(--notmet);color:var(--notmet);}
+  .opt input:checked + span.na{background:var(--na-bg);border-color:var(--na);color:var(--na);}
+
+  .submit-bar{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    background:var(--card);
+    border-top:1px solid var(--line);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  button#submitBtn{
+    width:100%;
+    max-width:640px;
+    margin:0 auto;
+    display:block;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:14px;
+    font-size:15px;
+    font-weight:700;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  button#submitBtn:disabled{opacity:0.6;}
+  button#submitBtn:active{background:var(--accent-dark);}
+
+  .status{
+    max-width:640px;
+    margin:0 auto 10px;
+    padding:10px 14px;
+    border-radius:8px;
+    font-size:13.5px;
+    font-weight:600;
+    display:none;
+  }
+  .status.ok{display:block;background:var(--met-bg);color:var(--met);}
+  .status.err{display:block;background:var(--notmet-bg);color:var(--notmet);}
+
+  .req::after{content:" *";color:var(--notmet);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Time-Out Audit — Outside OR</h1>
+  <p>Tick Met, Not Met, or NA for each item below</p>
+</header>
+
+<div class="wrap">
+
+  <div id="statusBox" class="status"></div>
+
+  <div class="card">
+    <h2>Patient &amp; Audit Details</h2>
+
+    <label class="req">Department</label>
+    <select id="department" required>
+      <option value="" disabled selected>Select department</option>
+      <option>Anesthesia</option>
+      <option>MO</option>
+      <option>IM</option>
+      <option>Clinical &amp; Radiation Oncology</option>
+      <option>ICU &amp; Anesthesia</option>
+      <option>Endoscopy</option>
+      <option>Pathology</option>
+      <option>Radiology</option>
+    </select>
+
+    <label class="req">Name of Patient</label>
+    <input type="text" id="patientName" required>
+
+    <label class="req">MRNO</label>
+    <input type="text" id="mrno" required inputmode="numeric">
+
+    <label class="req">Date</label>
+    <input type="date" id="date" required>
+
+    <label class="req">Auditor Name</label>
+    <input type="text" id="auditorName" required>
+
+    <label>Speciality</label>
+    <input type="text" id="speciality">
+  </div>
+
+  <div class="card" style="padding-bottom:6px;">
+    <h2>Time-Out Process</h2>
+  </div>
+
+  <div id="questions"></div>
+
+</div>
+
+<div class="submit-bar">
+  <button id="submitBtn" type="button" onclick="submitAudit()">Save Entry</button>
+</div>
+
+<script>
+  // Paste your Apps Script Web App URL here (ends in /exec)
+  const APP_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+  const QUESTIONS = [
+    '"TIME OUT" is conducted before start of the procedure in the location the procedure is be done',
+    'All team members (physicians, assisting nurse) involved are present during the Time out',
+    'The Team identifies the patient using TWO unique identifiers from patient and ID band.',
+    'The team checks the consent for the correct procedure',
+    'The correct side (if applicable) — Site marking done',
+    'All relevant documents/images/studies are available, properly labelled and displayed',
+    'All requested implants/special equipment are available and have been verified',
+    'Are prophylactic antibiotics required for this procedure?',
+    'PRE-SEDATION ASSESSMENT (if applicable)',
+    'Name and Employee Code of the Physician and nurse documented.',
+    'During timeout, there was no Interruptions/Disruptions observed'
+  ];
+
+  const qContainer = document.getElementById('questions');
+  QUESTIONS.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = 'qcard';
+    div.innerHTML = `
+      <span class="qtext"><span class="qnum">${i + 1}</span>${q}</span>
+      <div class="options">
+        <label class="opt">
+          <input type="radio" name="q${i}" value="Met">
+          <span class="met">Met</span>
+        </label>
+        <label class="opt">
+          <input type="radio" name="q${i}" value="Not Met">
+          <span class="notmet">Not Met</span>
+        </label>
+        <label class="opt">
+          <input type="radio" name="q${i}" value="NA">
+          <span class="na">NA</span>
+        </label>
+      </div>
+    `;
+    qContainer.appendChild(div);
+  });
+
+  // default date to today
+  document.getElementById('date').valueAsDate = new Date();
+
+  function showStatus(msg, ok){
+    const box = document.getElementById('statusBox');
+    box.textContent = msg;
+    box.className = 'status ' + (ok ? 'ok' : 'err');
+  }
+
+  function submitAudit(){
+    const department = document.getElementById('department').value;
+    const patientName = document.getElementById('patientName').value.trim();
+    const mrno = document.getElementById('mrno').value.trim();
+    const date = document.getElementById('date').value;
+    const auditorName = document.getElementById('auditorName').value.trim();
+    const speciality = document.getElementById('speciality').value.trim();
+
+    if(!department || !patientName || !mrno || !date || !auditorName){
+      showStatus('Please fill in all required fields (marked *).', false);
+      return;
+    }
+
+    const answers = [];
+    for(let i = 0; i < QUESTIONS.length; i++){
+      const checked = document.querySelector(`input[name="q${i}"]:checked`);
+      if(!checked){
+        showStatus(`Please answer question ${i + 1} before saving.`, false);
+        return;
+      }
+      answers.push(checked.value);
+    }
+
+    if(APP_URL.indexOf('PASTE_YOUR') === 0){
+      showStatus('Set APP_URL at the top of the script to your Apps Script Web App URL first.', false);
+      return;
+    }
+
+    const payload = { department, patientName, mrno, date, auditorName, speciality, answers };
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    fetch(APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(res => {
+      if(res.result === 'success'){
+        showStatus('Saved. Ready for the next patient.', true);
+        resetForm();
+      } else {
+        showStatus('Save failed: ' + (res.message || 'unknown error'), false);
+      }
+    })
+    .catch(err => showStatus('Network error: ' + err.message, false))
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Save Entry';
+    });
+  }
+
+  function resetForm(){
+    document.getElementById('patientName').value = '';
+    document.getElementById('mrno').value = '';
+    document.getElementById('speciality').value = '';
+    document.querySelectorAll('input[type=radio]:checked').forEach(r => r.checked = false);
+    // keep department, auditor name, and date as-is — usually unchanged between consecutive patients
+    document.getElementById('patientName').focus();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+</script>
+
+</body>
+</html>
